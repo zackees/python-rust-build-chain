@@ -23,9 +23,12 @@ jobs:
       - name: "Build (cold — zccache)"
         shell: bash
         run: |
+          # Unset CARGO_MAKEFLAGS to avoid jobserver FD issue through uv/maturin
+          unset CARGO_MAKEFLAGS
+
           echo "::group::Cold build"
           START=$(date +%s%3N)
-          uv run maturin build --release --target x86_64-unknown-linux-gnu
+          cargo build --release --target x86_64-unknown-linux-gnu
           END=$(date +%s%3N)
           COLD_MS=$((END - START))
           echo "::endgroup::"
@@ -36,7 +39,7 @@ jobs:
 
           echo "::group::Warm build"
           START=$(date +%s%3N)
-          uv run maturin build --release --target x86_64-unknown-linux-gnu
+          cargo build --release --target x86_64-unknown-linux-gnu
           END=$(date +%s%3N)
           WARM_MS=$((END - START))
           echo "::endgroup::"
@@ -82,15 +85,6 @@ jobs:
           cache-targets: false
           shared-key: benchmark-sccache
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
-
-      - name: Install Python deps
-        run: uv sync --no-install-project
-
       - name: "Build (cold — sccache)"
         shell: bash
         env:
@@ -101,7 +95,7 @@ jobs:
         run: |
           echo "::group::Cold build"
           START=$(date +%s%3N)
-          uv run maturin build --release --target x86_64-unknown-linux-gnu
+          cargo build --release --target x86_64-unknown-linux-gnu
           END=$(date +%s%3N)
           COLD_MS=$((END - START))
           echo "::endgroup::"
@@ -112,7 +106,7 @@ jobs:
 
           echo "::group::Warm build"
           START=$(date +%s%3N)
-          uv run maturin build --release --target x86_64-unknown-linux-gnu
+          cargo build --release --target x86_64-unknown-linux-gnu
           END=$(date +%s%3N)
           WARM_MS=$((END - START))
           echo "::endgroup::"
