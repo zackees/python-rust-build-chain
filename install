@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "==> Setting up python-rust-build-chain template"
+
+# --- Step 1: Python environment ---
+if ! command -v uv &>/dev/null; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+fi
+
+if [ ! -d ".venv" ]; then
+    echo "Creating virtual environment..."
+    uv venv --python 3.11 --seed
+fi
+
+echo "Syncing Python dependencies..."
+# --no-install-project avoids the hidden maturin compilation bomb in CI
+uv sync --no-install-project
+
+# --- Step 2: Rust toolchain ---
+if ! command -v rustup &>/dev/null; then
+    echo "Installing rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+CHANNEL=$(grep 'channel' rust-toolchain.toml | sed 's/.*= *"\(.*\)"/\1/')
+echo "Installing Rust toolchain $CHANNEL..."
+rustup toolchain install "$CHANNEL" --profile minimal -c clippy -c rustfmt --no-self-update
+
+# --- Step 3: Verify ---
+echo ""
+echo "==> Setup complete!"
+echo "    Python: $(uv run python --version)"
+echo "    Rust:   $(rustup run "$CHANNEL" rustc --version)"
+echo "    Maturin: $(uv run maturin --version 2>/dev/null || echo 'will be available via uv run')"
+echo ""
+echo "    Build:  uv run maturin develop"
+echo "    Test:   uv run pytest"
+echo "    Lint:   ./lint"

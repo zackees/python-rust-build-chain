@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CHANNEL=$(grep 'channel' "$SCRIPT_DIR/rust-toolchain.toml" | sed 's/.*= *"\(.*\)"/\1/')
+TOOLCHAIN_BIN="$(rustup run "$CHANNEL" rustc --print sysroot)/bin"
+export PATH="$TOOLCHAIN_BIN:$PATH"
+exec rustc "$@"

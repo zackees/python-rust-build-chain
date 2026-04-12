@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            maturin-args: "--zig --compatibility manylinux2014"
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            maturin-args: "--zig --compatibility manylinux2014"
+          - os: macos-15
+            target: aarch64-apple-darwin
+            maturin-args: ""
+          - os: macos-14
+            target: x86_64-apple-darwin
+            maturin-args: ""
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+            maturin-args: ""
+          - os: windows-2025
+            target: aarch64-pc-windows-msvc
+            maturin-args: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup
+        with:
+          rust-target: ${{ matrix.target }}
+
+      - name: Build wheel
+        shell: bash
+        run: |
+          uv run maturin build \
+            --release \
+            --target ${{ matrix.target }} \
+            ${{ matrix.maturin-args }}
+
+      # Windows ARM workaround
+      - name: Retry with PyO3 import lib fix (Windows ARM only)
+        if: failure() && matrix.target == 'aarch64-pc-windows-msvc'
+        shell: bash
+        run: |
+          find target -name "python3.lib" -exec sh -c \
+            'dir=$(dirname "$1"); [ ! -f "$dir/python310.lib" ] && cp "$1" "$dir/python310.lib"' _ {} \;
+          uv run maturin build \
+            --release \
+            --target ${{ matrix.target }} \
+            ${{ matrix.maturin-args }}
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.target }}
+          path: target/wheels/*.whl
+
+  build-sdist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --no-install-project
+      - run: uv run maturin sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: target/wheels/*.tar.gz
+
+  publish:
+    needs: [build-wheels, build-sdist]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      id-token: write  # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

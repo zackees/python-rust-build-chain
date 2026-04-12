@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+EXIT_CODE=0
+FIX_MODE=""
+
+if [[ "${1:-}" == "--fix" ]]; then
+    FIX_MODE="--fix"
+    shift
+fi
+
+echo "==> Rust: cargo fmt"
+"$SCRIPT_DIR/_cargo" fmt --all -- ${FIX_MODE:+} --check 2>/dev/null || \
+    "$SCRIPT_DIR/_cargo" fmt --all ${FIX_MODE:+}
+if [ -z "$FIX_MODE" ]; then
+    "$SCRIPT_DIR/_cargo" fmt --all -- --check || EXIT_CODE=1
+fi
+
+echo "==> Rust: cargo clippy"
+"$SCRIPT_DIR/_cargo" clippy --workspace --all-targets -- -D warnings || EXIT_CODE=1
+
+echo "==> Python: ruff check"
+if [ -n "$FIX_MODE" ]; then
+    uv run ruff check --fix src/ tests/ ci/ || EXIT_CODE=1
+    uv run ruff format src/ tests/ ci/ || EXIT_CODE=1
+else
+    uv run ruff check src/ tests/ ci/ || EXIT_CODE=1
+    uv run ruff format --check src/ tests/ ci/ || EXIT_CODE=1
+fi
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo "==> Lint FAILED"
+else
+    echo "==> Lint passed"
+fi
+
+exit $EXIT_CODE

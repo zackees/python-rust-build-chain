@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/my-project-core",
+    "crates/my-project-py",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/zackees/python-rust-build-chain"
+
+[workspace.dependencies]
+pyo3 = { version = "0.23", features = ["abi3-py310", "generate-import-lib"] }
+my-project-core = { path = "crates/my-project-core", version = "0.1.0" }

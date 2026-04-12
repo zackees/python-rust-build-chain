@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Parse toolchain from rust-toolchain.toml
+CHANNEL=$(grep 'channel' "$SCRIPT_DIR/rust-toolchain.toml" | sed 's/.*= *"\(.*\)"/\1/')
+
+# Resolve the toolchain bin directory
+TOOLCHAIN_BIN="$(rustup run "$CHANNEL" rustc --print sysroot)/bin"
+export PATH="$TOOLCHAIN_BIN:$PATH"
+
+# Force MSVC target on Windows (prevents Chocolatey GNU Rust contamination)
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    ARCH="$(uname -m)"
+    case "$ARCH" in
+      x86_64)  export CARGO_BUILD_TARGET="x86_64-pc-windows-msvc" ;;
+      aarch64) export CARGO_BUILD_TARGET="aarch64-pc-windows-msvc" ;;
+    esac
+    ;;
+esac
+
+exec cargo "$@"
