@@ -5,7 +5,7 @@ for Rust compilation on any platform. Handles:
 - Reading the pinned toolchain from rust-toolchain.toml
 - Detecting host target triple
 - Forcing MSVC on Windows (prevents GNU Rust contamination)
-- Finding sccache if available
+- Finding zccache/sccache if available
 - Resolving Visual Studio environment on Windows
 """
 
@@ -77,9 +77,12 @@ def build_env() -> dict[str, str]:
     env["CARGO_BUILD_TARGET"] = triple
     env["PATH"] = bin_dir + os.pathsep + env.get("PATH", "")
 
-    # sccache integration (if available)
+    # Compilation cache: prefer zccache, fall back to sccache
+    zccache = shutil.which("zccache")
     sccache = shutil.which("sccache")
-    if sccache:
+    if zccache:
+        env["RUSTC_WRAPPER"] = zccache
+    elif sccache:
         env["RUSTC_WRAPPER"] = sccache
 
     # Windows: force MSVC target
