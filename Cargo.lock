@@ -70,6 +70,7 @@ version = "0.1.0"
 dependencies = [
  "my-project-core",
  "pyo3",
+ "pyo3-build-config",
 ]
 
 [[package]]
