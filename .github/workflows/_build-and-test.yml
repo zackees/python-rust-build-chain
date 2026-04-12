@@ -62,17 +62,9 @@ jobs:
           name: wheel-${{ inputs.target }}
           path: target/wheels/*.whl
 
-      - name: Stop zccache
+      - name: Cleanup zccache
         if: always()
-        shell: bash
-        run: zccache stop || true
-
-      - name: Save zccache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.zccache
-          key: zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.target }}-${{ github.sha }}
+        uses: zackees/zccache/action/cleanup@main
 
   lint:
     name: "Lint (${{ inputs.target }})"
@@ -103,17 +95,9 @@ jobs:
           uv run ruff check src/ tests/ ci/
           uv run ruff format --check src/ tests/ ci/
 
-      - name: Stop zccache
+      - name: Cleanup zccache
         if: always()
-        shell: bash
-        run: zccache stop || true
-
-      - name: Save zccache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.zccache
-          key: zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.target }}-${{ github.sha }}
+        uses: zackees/zccache/action/cleanup@main
 
   test:
     name: "Test (${{ inputs.target }})"
@@ -142,14 +126,6 @@ jobs:
         shell: bash
         run: uv run pytest tests/ -v
 
-      - name: Stop zccache
+      - name: Cleanup zccache
         if: always()
-        shell: bash
-        run: zccache stop || true
-
-      - name: Save zccache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.zccache
-          key: zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.target }}-${{ github.sha }}
+        uses: zackees/zccache/action/cleanup@main

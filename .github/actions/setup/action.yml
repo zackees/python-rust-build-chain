@@ -25,29 +25,11 @@ runs:
       env:
         RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
 
-    # Layer 1: zccache (compiler output cache — replaces sccache)
-    # ~1ms per warm hit vs ~170ms for sccache
-    - name: Restore zccache
-      uses: actions/cache/restore@v4
+    # Layers 1+2: zccache (compilation cache + cargo registry)
+    # Replaces both sccache and Swatinem/rust-cache
+    - name: Setup zccache
+      uses: zackees/zccache@main
       with:
-        path: ~/.zccache
-        key: zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.rust-target }}-${{ github.sha }}
-        restore-keys: |
-          zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.rust-target }}-
-          zccache-${{ runner.os }}-${{ runner.arch }}-
-
-    - name: Install and start zccache
-      shell: bash
-      run: |
-        pip install zccache
-        zccache start
-
-    # Layer 2: Swatinem/rust-cache (registry + index only, NO target caching)
-    # Kept until zccache gains cargo registry caching (see zackees/zccache#10)
-    - name: Setup Rust cache (registry only)
-      uses: Swatinem/rust-cache@v2
-      with:
-        cache-targets: false
         shared-key: ${{ inputs.rust-target }}
 
     # Layer 3: uv cache (Python packages)

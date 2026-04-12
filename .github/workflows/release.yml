@@ -67,17 +67,9 @@ jobs:
           name: wheel-${{ matrix.target }}
           path: target/wheels/*.whl
 
-      - name: Stop zccache
+      - name: Cleanup zccache
         if: always()
-        shell: bash
-        run: zccache stop || true
-
-      - name: Save zccache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.zccache
-          key: zccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-${{ github.sha }}
+        uses: zackees/zccache/action/cleanup@main
 
   build-sdist:
     runs-on: ubuntu-24.04
