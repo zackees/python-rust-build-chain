@@ -1,5 +1,5 @@
 name: "Setup Build Environment"
-description: "Install Rust toolchain, Python via uv, and configure 3-layer cache"
+description: "Install Rust toolchain, Python via uv, and configure caching with zccache"
 
 inputs:
   rust-target:
@@ -25,12 +25,26 @@ runs:
       env:
         RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
 
-    # Layer 1: sccache (compiler output cache)
-    - name: Setup sccache
-      uses: mozilla-actions/sccache-action@v0.0.9
+    # Layer 1: zccache (compiler output cache — replaces sccache)
+    # ~1ms per warm hit vs ~170ms for sccache
+    - name: Restore zccache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/.zccache
+        key: zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.rust-target }}-${{ github.sha }}
+        restore-keys: |
+          zccache-${{ runner.os }}-${{ runner.arch }}-${{ inputs.rust-target }}-
+          zccache-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Install and start zccache
+      shell: bash
+      run: |
+        pip install zccache
+        zccache start
 
     # Layer 2: Swatinem/rust-cache (registry + index only, NO target caching)
-    - name: Setup Rust cache
+    # Kept until zccache gains cargo registry caching (see zackees/zccache#10)
+    - name: Setup Rust cache (registry only)
       uses: Swatinem/rust-cache@v2
       with:
         cache-targets: false
@@ -50,7 +64,6 @@ runs:
     - name: Set build environment
       shell: bash
       run: |
-        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
-        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+        echo "RUSTC_WRAPPER=zccache" >> "$GITHUB_ENV"
         echo "CARGO_BUILD_TARGET=${{ inputs.rust-target }}" >> "$GITHUB_ENV"
         echo "RUSTUP_TOOLCHAIN=${{ steps.toolchain.outputs.channel }}" >> "$GITHUB_ENV"
