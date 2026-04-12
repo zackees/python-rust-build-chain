@@ -8,120 +8,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # --- Legacy: sccache + Swatinem/rust-cache ---
-  sccache-legacy:
-    name: "sccache + Swatinem/rust-cache (legacy)"
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Read rust-toolchain.toml
-        id: toolchain
-        shell: bash
-        run: |
-          CHANNEL=$(grep 'channel' rust-toolchain.toml | sed 's/.*= *"\(.*\)"/\1/')
-          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
-
-      - name: Install Rust toolchain
-        shell: bash
-        run: |
-          rustup toolchain install ${{ steps.toolchain.outputs.channel }} \
-            --profile minimal --no-self-update
-        env:
-          RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
-
-      - name: Setup Swatinem/rust-cache (registry only)
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-targets: false
-          shared-key: benchmark-sccache
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
-
-      - name: Install Python deps
-        run: uv sync --no-install-project
-
-      - name: "Build (cold — sccache)"
-        shell: bash
-        run: |
-          export SCCACHE_GHA_ENABLED=true
-          export RUSTC_WRAPPER=sccache
-          export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu
-          export RUSTUP_TOOLCHAIN=${{ steps.toolchain.outputs.channel }}
-
-          echo "::group::Cold build"
-          START=$(date +%s%3N)
-          uv run maturin build --release --target x86_64-unknown-linux-gnu --zig --compatibility manylinux2014
-          END=$(date +%s%3N)
-          COLD_MS=$((END - START))
-          echo "::endgroup::"
-          echo "### sccache cold build: ${COLD_MS}ms" >> "$GITHUB_STEP_SUMMARY"
-
-          # Clean build artifacts (but not caches) for warm run
-          cargo clean
-
-          echo "::group::Warm build"
-          START=$(date +%s%3N)
-          uv run maturin build --release --target x86_64-unknown-linux-gnu --zig --compatibility manylinux2014
-          END=$(date +%s%3N)
-          WARM_MS=$((END - START))
-          echo "::endgroup::"
-          echo "### sccache warm build: ${WARM_MS}ms" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: sccache stats
-        if: always()
-        run: sccache --show-stats
-
-  # --- Current: zccache (3-layer) ---
+  # --- Current: zccache (3-layer via setup action) ---
   zccache-current:
     name: "zccache 3-layer (current)"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read rust-toolchain.toml
-        id: toolchain
-        shell: bash
-        run: |
-          CHANNEL=$(grep 'channel' rust-toolchain.toml | sed 's/.*= *"\(.*\)"/\1/')
-          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
-
-      - name: Install Rust toolchain
-        shell: bash
-        run: |
-          rustup toolchain install ${{ steps.toolchain.outputs.channel }} \
-            --profile minimal --no-self-update
-        env:
-          RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
-
-      - name: Setup zccache
-        uses: zackees/zccache@main
+      - name: Setup build environment
+        uses: ./.github/actions/setup
         with:
-          shared-key: benchmark-zccache
-          save-cache: "true"
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
-
-      - name: Install Python deps
-        run: uv sync --no-install-project
+          rust-target: x86_64-unknown-linux-gnu
 
       - name: "Build (cold — zccache)"
         shell: bash
         run: |
-          export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu
-          export RUSTUP_TOOLCHAIN=${{ steps.toolchain.outputs.channel }}
-
           echo "::group::Cold build"
           START=$(date +%s%3N)
           uv run maturin build --release --target x86_64-unknown-linux-gnu --zig --compatibility manylinux2014
@@ -148,3 +49,75 @@ jobs:
       - name: Cleanup zccache
         if: always()
         uses: zackees/zccache/action/cleanup@main
+
+  # --- Legacy: sccache + Swatinem/rust-cache ---
+  sccache-legacy:
+    name: "sccache + Swatinem/rust-cache (legacy)"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read rust-toolchain.toml
+        id: toolchain
+        shell: bash
+        run: |
+          CHANNEL=$(grep 'channel' rust-toolchain.toml | sed 's/.*= *"\(.*\)"/\1/')
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install ${{ steps.toolchain.outputs.channel }} \
+            --profile minimal -c clippy -c rustfmt --no-self-update
+          rustup target add x86_64-unknown-linux-gnu --toolchain ${{ steps.toolchain.outputs.channel }}
+        env:
+          RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Setup Swatinem/rust-cache (registry only)
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: false
+          shared-key: benchmark-sccache
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python deps
+        run: uv sync --no-install-project
+
+      - name: "Build (cold — sccache)"
+        shell: bash
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: sccache
+          CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
+          RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
+        run: |
+          echo "::group::Cold build"
+          START=$(date +%s%3N)
+          uv run maturin build --release --target x86_64-unknown-linux-gnu --zig --compatibility manylinux2014
+          END=$(date +%s%3N)
+          COLD_MS=$((END - START))
+          echo "::endgroup::"
+          echo "### sccache cold build: ${COLD_MS}ms" >> "$GITHUB_STEP_SUMMARY"
+
+          # Clean build artifacts (but not caches) for warm run
+          cargo clean
+
+          echo "::group::Warm build"
+          START=$(date +%s%3N)
+          uv run maturin build --release --target x86_64-unknown-linux-gnu --zig --compatibility manylinux2014
+          END=$(date +%s%3N)
+          WARM_MS=$((END - START))
+          echo "::endgroup::"
+          echo "### sccache warm build: ${WARM_MS}ms" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: sccache stats
+        if: always()
+        run: sccache --show-stats
