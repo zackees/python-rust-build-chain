@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: ""
+      save-cache:
+        required: false
+        type: string
+        default: "true"
 
 jobs:
   build:
@@ -25,6 +29,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           rust-target: ${{ inputs.target }}
+          save-cache: ${{ inputs.save-cache }}
 
       - name: Build wheel
         shell: bash
@@ -80,6 +85,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           rust-target: ${{ inputs.target }}
+          save-cache: ${{ inputs.save-cache }}
 
       - name: Rust fmt
         shell: bash
@@ -113,6 +119,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           rust-target: ${{ inputs.target }}
+          save-cache: ${{ inputs.save-cache }}
 
       - name: Rust tests
         shell: bash

@@ -5,6 +5,10 @@ inputs:
   rust-target:
     description: "Rust target triple (e.g., x86_64-unknown-linux-gnu)"
     required: true
+  save-cache:
+    description: "Save caches at the end (set false for PR builds to save GHA cache budget)"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -25,14 +29,17 @@ runs:
       env:
         RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
 
-    # Layers 1+2: zccache (compilation cache + cargo registry)
-    # Replaces both sccache and Swatinem/rust-cache
+    # 3-layer caching via zccache (replaces sccache + Swatinem/rust-cache):
+    #   1. Compilation cache (~/.zccache) — cached .o/.rlib per compilation unit
+    #   2. Cargo registry — index, crate downloads, git deps
+    #   3. Target metadata — fingerprints + dep-info; warm restores .rlib/.rmeta
     - name: Setup zccache
       uses: zackees/zccache@main
       with:
         shared-key: ${{ inputs.rust-target }}
+        save-cache: ${{ inputs.save-cache }}
 
-    # Layer 3: uv cache (Python packages)
+    # Layer 4: uv cache (Python packages)
     - name: Setup uv
       uses: astral-sh/setup-uv@v5
       with:
@@ -46,6 +53,6 @@ runs:
     - name: Set build environment
       shell: bash
       run: |
-        echo "RUSTC_WRAPPER=zccache" >> "$GITHUB_ENV"
+        # RUSTC_WRAPPER=zccache is set by the zccache action above
         echo "CARGO_BUILD_TARGET=${{ inputs.rust-target }}" >> "$GITHUB_ENV"
         echo "RUSTUP_TOOLCHAIN=${{ steps.toolchain.outputs.channel }}" >> "$GITHUB_ENV"

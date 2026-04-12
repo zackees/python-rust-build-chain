@@ -38,3 +38,5 @@ jobs:
       runner: ${{ matrix.os }}
       target: ${{ matrix.target }}
       maturin-args: ${{ matrix.maturin-args }}
+      # Only save caches on push to main (skip on PRs to save GHA cache budget)
+      save-cache: ${{ github.event_name != 'pull_request' }}
