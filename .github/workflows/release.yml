@@ -14,24 +14,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-gnu
-            maturin-args: "--zig --compatibility manylinux2014"
+          # Linux wheels build on the opposite-arch runner: soldr wheel only
+          # enforces (and tags) manylinux_2_17 on a cross build.
           - os: ubuntu-24.04-arm
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
-            maturin-args: "--zig --compatibility manylinux2014"
           - os: macos-15
             target: aarch64-apple-darwin
-            maturin-args: ""
           - os: macos-14
             target: x86_64-apple-darwin
-            maturin-args: ""
           - os: windows-2025
             target: x86_64-pc-windows-msvc
-            maturin-args: ""
           - os: windows-2025
             target: aarch64-pc-windows-msvc
-            maturin-args: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -41,25 +37,10 @@ jobs:
         with:
           rust-target: ${{ matrix.target }}
 
+      # soldr wheel, not the maturin CLI or zig (zackees/ci.yml#17).
       - name: Build wheel
         shell: bash
-        run: |
-          uv run --no-sync maturin build \
-            --release \
-            --target ${{ matrix.target }} \
-            ${{ matrix.maturin-args }}
-
-      # Windows ARM workaround
-      - name: Retry with PyO3 import lib fix (Windows ARM only)
-        if: failure() && matrix.target == 'aarch64-pc-windows-msvc'
-        shell: bash
-        run: |
-          find target -name "python3.lib" -exec sh -c \
-            'dir=$(dirname "$1"); [ ! -f "$dir/python310.lib" ] && cp "$1" "$dir/python310.lib"' _ {} \;
-          uv run --no-sync maturin build \
-            --release \
-            --target ${{ matrix.target }} \
-            ${{ matrix.maturin-args }}
+        run: uvx --from 'soldr>=0.9.25' soldr wheel --release --target ${{ matrix.target }}
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
@@ -76,8 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --no-install-project
-      - run: uv run --no-sync maturin sdist
+      - run: uv build --sdist --out-dir target/wheels
       - uses: actions/upload-artifact@v4
         with:
           name: sdist

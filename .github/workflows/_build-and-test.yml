@@ -9,7 +9,10 @@ on:
       target:
         required: true
         type: string
-      maturin-args:
+      build-runner:
+        # Runner for the wheel build only; defaults to `runner`. Linux targets
+        # build on the opposite-arch runner so `soldr wheel` does a cross build,
+        # the only build it can tag manylinux_2_17 (soldr docs/API.md).
         required: false
         type: string
         default: ""
@@ -21,7 +24,7 @@ on:
 jobs:
   build:
     name: "Build (${{ inputs.target }})"
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.build-runner || inputs.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,26 +34,12 @@ jobs:
           rust-target: ${{ inputs.target }}
           save-cache: ${{ inputs.save-cache }}
 
+      # soldr wheel, not the maturin CLI or zig (zackees/ci.yml#17). uvx runs
+      # soldr in its own env (no project sync); keep the floor in step with
+      # pyproject's build-system requirement.
       - name: Build wheel
         shell: bash
-        run: |
-          uv run --no-sync maturin build \
-            --release \
-            --target ${{ inputs.target }} \
-            ${{ inputs.maturin-args }}
-
-      # Windows ARM workaround: PyO3 generate-import-lib creates python3.lib
-      # but the linker expects python310.lib
-      - name: Retry with PyO3 import lib fix (Windows ARM only)
-        if: failure() && inputs.target == 'aarch64-pc-windows-msvc'
-        shell: bash
-        run: |
-          find target -name "python3.lib" -exec sh -c \
-            'dir=$(dirname "$1"); [ ! -f "$dir/python310.lib" ] && cp "$1" "$dir/python310.lib"' _ {} \;
-          uv run --no-sync maturin build \
-            --release \
-            --target ${{ inputs.target }} \
-            ${{ inputs.maturin-args }}
+        run: uvx --from 'soldr>=0.9.25' soldr wheel --release --target ${{ inputs.target }}
 
       - name: Audit wheel (Linux only)
         if: runner.os == 'Linux'
@@ -107,6 +96,7 @@ jobs:
 
   test:
     name: "Test (${{ inputs.target }})"
+    needs: build
     runs-on: ${{ inputs.runner }}
     # Only test on native targets
     if: >-
@@ -125,9 +115,16 @@ jobs:
         shell: bash
         run: cargo test --workspace
 
-      - name: Build and install for Python tests
+      # Test the wheel the build job produced, not a local rebuild.
+      - name: Download wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel-${{ inputs.target }}
+          path: dist/
+
+      - name: Install wheel
         shell: bash
-        run: uv run --no-sync maturin develop --release
+        run: uv pip install dist/*.whl
 
       - name: Python tests
         shell: bash
