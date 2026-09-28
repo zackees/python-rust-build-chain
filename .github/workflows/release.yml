@@ -44,7 +44,7 @@ jobs:
       - name: Build wheel
         shell: bash
         run: |
-          uv run maturin build \
+          uv run --no-sync maturin build \
             --release \
             --target ${{ matrix.target }} \
             ${{ matrix.maturin-args }}
@@ -56,7 +56,7 @@ jobs:
         run: |
           find target -name "python3.lib" -exec sh -c \
             'dir=$(dirname "$1"); [ ! -f "$dir/python310.lib" ] && cp "$1" "$dir/python310.lib"' _ {} \;
-          uv run maturin build \
+          uv run --no-sync maturin build \
             --release \
             --target ${{ matrix.target }} \
             ${{ matrix.maturin-args }}
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --no-install-project
-      - run: uv run maturin sdist
+      - run: uv run --no-sync maturin sdist
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
