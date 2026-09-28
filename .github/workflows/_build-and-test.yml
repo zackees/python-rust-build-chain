@@ -34,7 +34,7 @@ jobs:
       - name: Build wheel
         shell: bash
         run: |
-          uv run maturin build \
+          uv run --no-sync maturin build \
             --release \
             --target ${{ inputs.target }} \
             ${{ inputs.maturin-args }}
@@ -47,7 +47,7 @@ jobs:
         run: |
           find target -name "python3.lib" -exec sh -c \
             'dir=$(dirname "$1"); [ ! -f "$dir/python310.lib" ] && cp "$1" "$dir/python310.lib"' _ {} \;
-          uv run maturin build \
+          uv run --no-sync maturin build \
             --release \
             --target ${{ inputs.target }} \
             ${{ inputs.maturin-args }}
@@ -58,7 +58,7 @@ jobs:
         run: |
           uv pip install auditwheel
           for whl in target/wheels/*.whl; do
-            uv run auditwheel show "$whl"
+            uv run --no-sync auditwheel show "$whl"
           done
 
       - name: Upload wheel
@@ -69,7 +69,7 @@ jobs:
 
       - name: Cleanup zccache
         if: always()
-        uses: zackees/zccache/action/cleanup@main
+        uses: zackees/zccache/action/cleanup@1.14.14
 
   lint:
     name: "Lint (${{ inputs.target }})"
@@ -98,12 +98,12 @@ jobs:
       - name: Python ruff
         shell: bash
         run: |
-          uv run ruff check src/ tests/ ci/
-          uv run ruff format --check src/ tests/ ci/
+          uv run --no-sync ruff check src/ tests/ ci/
+          uv run --no-sync ruff format --check src/ tests/ ci/
 
       - name: Cleanup zccache
         if: always()
-        uses: zackees/zccache/action/cleanup@main
+        uses: zackees/zccache/action/cleanup@1.14.14
 
   test:
     name: "Test (${{ inputs.target }})"
@@ -127,12 +127,12 @@ jobs:
 
       - name: Build and install for Python tests
         shell: bash
-        run: uv run maturin develop --release
+        run: uv run --no-sync maturin develop --release
 
       - name: Python tests
         shell: bash
-        run: uv run pytest tests/ -v
+        run: uv run --no-sync pytest tests/ -v
 
       - name: Cleanup zccache
         if: always()
-        uses: zackees/zccache/action/cleanup@main
+        uses: zackees/zccache/action/cleanup@1.14.14

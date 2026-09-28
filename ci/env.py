@@ -58,7 +58,9 @@ def toolchain_bin() -> Path:
     channel = load_toolchain_channel()
     result = subprocess.run(
         ["rustup", "run", channel, "rustc", "--print", "sysroot"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return Path(result.stdout.strip()) / "bin"
 

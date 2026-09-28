@@ -15,7 +15,7 @@ pyo3.workspace = true
 my-project-core.workspace = true
 
 [build-dependencies]
-pyo3-build-config = "0.23"
+pyo3-build-config = "0.27"
 
 [features]
 extension-module = ["pyo3/extension-module"]

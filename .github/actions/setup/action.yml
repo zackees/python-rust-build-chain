@@ -33,11 +33,16 @@ runs:
     #   1. Compilation cache (~/.zccache) — cached .o/.rlib per compilation unit
     #   2. Cargo registry — index, crate downloads, git deps
     #   3. Target metadata — fingerprints + dep-info; warm restores .rlib/.rmeta
+    # Save caches fully under act (local bosn runs are pull_request events; act's
+    # local cache server has no ref scoping or budget). GitHub PR runs still skip saves.
     - name: Setup zccache
-      uses: zackees/zccache@main
+      # Pinned (action ref and binary together). Bump the matching
+      # zackees/zccache/action/cleanup@ refs in .github/workflows/ with it.
+      uses: zackees/zccache@1.14.14
       with:
+        zccache-version: "1.14.14"
         shared-key: ${{ inputs.rust-target }}
-        save-cache: ${{ inputs.save-cache }}
+        save-cache: ${{ env.ACT == 'true' || inputs.save-cache }}
 
     # Layer 4: uv cache (Python packages)
     - name: Setup uv

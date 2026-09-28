@@ -51,7 +51,7 @@ jobs:
 
       - name: Cleanup zccache
         if: always()
-        uses: zackees/zccache/action/cleanup@main
+        uses: zackees/zccache/action/cleanup@1.14.14
 
   # --- Legacy: sccache + Swatinem/rust-cache ---
   sccache-legacy:
