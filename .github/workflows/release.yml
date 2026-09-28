@@ -14,9 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux wheels build on the opposite-arch runner: soldr wheel only
-          # enforces (and tags) manylinux_2_17 on a cross build.
-          - os: ubuntu-24.04-arm
+          # soldr wheel enforces (and tags) manylinux_2_17 only on a cross
+          # build. aarch64 cross-builds from x86_64; x86_64 cannot cross from
+          # arm64 (soldr#2874), so it builds natively and is tagged from the
+          # bytes until soldr#3432 lands.
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu

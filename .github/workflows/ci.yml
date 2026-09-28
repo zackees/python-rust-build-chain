@@ -15,9 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # x86_64 builds natively: soldr cannot cross to it from arm64
+          # (soldr#2874), so its tag follows the runner glibc (soldr#3432).
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            build-runner: ubuntu-24.04-arm
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             build-runner: ubuntu-24.04

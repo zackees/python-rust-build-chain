@@ -10,9 +10,9 @@ on:
         required: true
         type: string
       build-runner:
-        # Runner for the wheel build only; defaults to `runner`. Linux targets
-        # build on the opposite-arch runner so `soldr wheel` does a cross build,
-        # the only build it can tag manylinux_2_17 (soldr docs/API.md).
+        # Runner for the wheel build only; defaults to `runner`. aarch64 Linux
+        # builds on x86_64 so `soldr wheel` does a cross build, the only build
+        # it tags manylinux_2_17 (soldr docs/API.md, soldr#3432).
         required: false
         type: string
         default: ""

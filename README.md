@@ -134,7 +134,7 @@ All three Rust caching layers are handled by a single [`zackees/zccache`](https:
 
 | Target | Runner | Method | Notes |
 |---|---|---|---|
-| `x86_64-unknown-linux-gnu` | `ubuntu-24.04-arm` | `soldr wheel` cross | manylinux_2_17 |
+| `x86_64-unknown-linux-gnu` | `ubuntu-24.04` | `soldr wheel` native | tag from host glibc until zackees/soldr#3432 |
 | `aarch64-unknown-linux-gnu` | `ubuntu-24.04` | `soldr wheel` cross | manylinux_2_17 |
 | `aarch64-apple-darwin` | `macos-15` | native | ARM Mac |
 | `x86_64-apple-darwin` | `macos-14` | cross-compile | Intel Mac |
