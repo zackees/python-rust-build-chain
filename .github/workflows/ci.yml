@@ -15,28 +15,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # x86_64 builds natively: soldr cannot cross to it from arm64
+          # (soldr#2874), so its tag follows the runner glibc (soldr#3432).
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            maturin-args: "--zig --compatibility manylinux2014"
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            maturin-args: "--zig --compatibility manylinux2014"
+            build-runner: ubuntu-24.04
           - os: macos-15
             target: aarch64-apple-darwin
-            maturin-args: ""
           - os: macos-14
             target: x86_64-apple-darwin
-            maturin-args: ""
           - os: windows-2025
             target: x86_64-pc-windows-msvc
-            maturin-args: ""
           - os: windows-2025
             target: aarch64-pc-windows-msvc
-            maturin-args: ""
     uses: ./.github/workflows/_build-and-test.yml
     with:
       runner: ${{ matrix.os }}
       target: ${{ matrix.target }}
-      maturin-args: ${{ matrix.maturin-args }}
+      build-runner: ${{ matrix.build-runner }}
       # Only save caches on push to main (skip on PRs to save GHA cache budget)
       save-cache: ${{ github.event_name != 'pull_request' }}
