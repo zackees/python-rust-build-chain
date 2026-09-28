@@ -69,7 +69,7 @@ jobs:
 
       - name: Cleanup zccache
         if: always()
-        uses: zackees/zccache/action/cleanup@main
+        uses: zackees/zccache/action/cleanup@1.14.14
 
   build-sdist:
     runs-on: ubuntu-24.04
