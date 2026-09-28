@@ -21,7 +21,6 @@ classifiers = [
 
 [dependency-groups]
 dev = [
-    "maturin[zig]>=1.7,<2",
     "pytest>=8.0",
     "ruff>=0.4",
 ]
