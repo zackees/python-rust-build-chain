@@ -80,7 +80,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Setup Swatinem/rust-cache (registry only)
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2  # ci-lint: allow CACHE-025 benchmark: Swatinem is the comparison baseline under test
         with:
           cache-targets: false
           shared-key: benchmark-sccache
