@@ -53,9 +53,12 @@ jobs:
         if: always()
         uses: zackees/zccache/action/cleanup@1.14.14
 
-  # --- Legacy: sccache + Swatinem/rust-cache ---
+  # --- Legacy: sccache + an actions/cache cargo-registry cache ---
+  # Swatinem/rust-cache is banned with no exceptions (CACHE-025, zackees/ci.yml
+  # maintainer decision 2026-10-02); it only cached the registry here, which
+  # actions/cache does directly.
   sccache-legacy:
-    name: "sccache + Swatinem/rust-cache (legacy)"
+    name: "sccache + registry cache (legacy)"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -79,11 +82,14 @@ jobs:
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Setup Swatinem/rust-cache (registry only)
-        uses: Swatinem/rust-cache@v2  # ci-lint: allow CACHE-025 benchmark: Swatinem is the comparison baseline under test
+      - name: Cache cargo registry
+        uses: actions/cache@v4
         with:
-          cache-targets: false
-          shared-key: benchmark-sccache
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: benchmark-sccache-registry-${{ hashFiles('Cargo.lock') }}
 
       - name: "Build (cold — sccache)"
         shell: bash
